@@ -109,17 +109,14 @@ pub fn matmul_transb(c: &mut Tensor<f32>, beta: f32, a: &Tensor<f32>, b: &Tensor
     let a_data = a.data();
     let b_data = b.data();
     let c_data = unsafe{c.data_mut()};
-
-    let b_transposed_shape = vec![b_shape[1],b_shape[0]];
-
     for i in 0..a_shape[0]{
-        for j in 0..b_transposed_shape[1]{
+        for j in 0..b_shape[0]{
             let mut sum = 0.0;
             for k in 0..a_shape[1]{
                 sum += a_data[i * a_shape[1] + k] * b_data[j * b_shape[1] + k]; 
             }
-            *c_data.get_mut(i * b_transposed_shape[1]+j)
-                   .unwrap()=alpha * sum + beta * c_data[i * b_transposed_shape[1] + j];
+            *c_data.get_mut(i * b_shape[0]+j)
+                   .unwrap()=alpha * sum + beta * c_data[i * b_shape[0] + j];
         }
     }
 
