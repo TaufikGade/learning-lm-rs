@@ -1,6 +1,7 @@
 use crate::tensor::Tensor;
 
 // get (row) vectors from a 2D table given a list of indices
+//从table张量中根据indices张量提供的索引来选取数据从table张量中根据indices张量提供的索引来选取数据
 pub fn gather(y: &mut Tensor<f32>, indices: &Tensor<u32>, table: &Tensor<f32>) {
     let length = indices.size();
     let table_shape = table.shape();
@@ -71,25 +72,57 @@ pub fn masked_softmax(y: &mut Tensor<f32>) {
 }
 
 pub fn rms_norm(y: &mut Tensor<f32>, x: &Tensor<f32>, w: &Tensor<f32>, epsilon: f32) {
-    todo!("实现 rms_norm，计算前做一些必要的检查会帮助你后续调试")
+    let y_data=unsafe{y.data_mut()};
+    let shape=x.shape();
+    for i in 0..shape[0]{
+        let row_range=i*shape[1]..(i+1)*shape[1];
+        let sq=((x.data()[row_range.clone()].iter().map(|&x| x*x).sum::<f32>()/shape[1] as f32)+epsilon).sqrt();
+        y_data[row_range.clone()].iter_mut()
+        .zip(x.data()[row_range].iter().zip(w.data().iter())).for_each(
+            |(y_d,(x_d,w_d,))|{
+                *y_d = (*w_d * *x_d)/sq;
+            }
+        );
+    }
 }
 
 // y = sigmoid(x) * x * y
 // hint: this is an element-wise operation
 pub fn silu(y: &mut Tensor<f32>, x: &Tensor<f32>) {
-    // let len = y.size();
-    // assert!(len == x.size());
+    let len = y.size();
+    assert!(len == x.size());
 
-    // let _y = unsafe { y.data_mut() };
-    // let _x = x.data();
-
-    todo!("实现 silu，这里给了一些前期准备工作的提示，你可以参考")
+    let y_data = unsafe { y.data_mut() };
+    let x_data = x.data();
+    
+    for i in 0..x_data.len()  {
+        y_data[i]=y_data[i] *x_data[i]/ (1.0 + (-x_data[i]).exp())
+    }
 }
 
 // C = beta * C + alpha * A @ B^T
 // hint: You don't need to do an explicit transpose of B
 pub fn matmul_transb(c: &mut Tensor<f32>, beta: f32, a: &Tensor<f32>, b: &Tensor<f32>, alpha: f32) {
-    todo!("实现 matmul_transb，计算前做一些必要的检查会帮助你后续调试");
+    let a_shape = a.shape();
+    let b_shape = b.shape();
+    assert!(a_shape[a_shape.len()-1] == b_shape[1]);//"col A must equal to row b";
+    let a_data = a.data();
+    let b_data = b.data();
+    let c_data = unsafe{c.data_mut()};
+
+    let b_transposed_shape = vec![b_shape[1],b_shape[0]];
+
+    for i in 0..a_shape[0]{
+        for j in 0..b_transposed_shape[1]{
+            let mut sum = 0.0;
+            for k in 0..a_shape[1]{
+                sum += a_data[i * a_shape[1] + k] * b_data[j * b_shape[1] + k]; 
+            }
+            *c_data.get_mut(i * b_transposed_shape[1]+j)
+                   .unwrap()=alpha * sum + beta * c_data[i * b_transposed_shape[1] + j];
+        }
+    }
+
 }
 
 // Dot product of two tensors (treated as vectors)
