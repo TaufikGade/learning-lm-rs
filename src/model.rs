@@ -171,9 +171,9 @@ fn mlp(
     OP::matmul_transb(gate,0.0,hidden_states,w_gate,1.0);
     OP::matmul_transb(up,0.0,hidden_states,w_up,1.0);
     OP::silu(up,gate);
-    matmul_transb(hidden_states,0.0,up,w_down,1.0);
+    OP::matmul_transb(hidden_states,0.0,up,w_down,1.0);
     let len = residual.size();
-    let residual_data = unsafe{residual.ddata_mut()};
+    let residual_data = unsafe{residual.data_mut()};
     let hidden_data = hidden_states.data();
     for i in 0..len{
         residual_data[i] += hidden_data[i];
